@@ -1,0 +1,54 @@
+2025-04-25 00:59:20.485034: I tensorflow/core/platform/cpu_feature_guard.cc:210] This TensorFlow binary is optimized to use available CPU instructions in performance-critical operations.
+To enable the following instructions: AVX2 AVX512F AVX512_VNNI FMA, in other operations, rebuild TensorFlow with the appropriate compiler flags.
+Running pre-training evaluation...
+2025-04-25 00:59:34.360937: W tensorflow/core/framework/local_rendezvous.cc:404] Local rendezvous is aborting with status: OUT_OF_RANGE: End of sequence
+[Eval] AUC-PR: 0.0048, FNR: 0.9993, IoU: 0.0003, FireFront MAE: 31.12
+Step 000: Loss = 0.1190 | Accuracy = 0.9676
+2025-04-25 00:59:51.502710: W tensorflow/core/framework/local_rendezvous.cc:404] Local rendezvous is aborting with status: OUT_OF_RANGE: End of sequence
+[Eval] AUC-PR: 0.0047, FNR: 0.9993, IoU: 0.0004, FireFront MAE: 26.76
+Checkpoint saved at: ./checkpoints/MLPCNN-focal/step_0000/ckpt
+Step 025: Loss = 0.0400 | Accuracy = 0.9741
+2025-04-25 01:00:18.353342: W tensorflow/core/framework/local_rendezvous.cc:404] Local rendezvous is aborting with status: OUT_OF_RANGE: End of sequence
+[Eval] AUC-PR: 0.0039, FNR: 1.0000, IoU: 0.0000, FireFront MAE: nan
+Checkpoint saved at: ./checkpoints/MLPCNN-focal/step_0025/ckpt
+Step 050: Loss = 0.1558 | Accuracy = 0.9694
+2025-04-25 01:00:43.455923: W tensorflow/core/framework/local_rendezvous.cc:404] Local rendezvous is aborting with status: OUT_OF_RANGE: End of sequence
+[Eval] AUC-PR: 0.0039, FNR: 1.0000, IoU: 0.0000, FireFront MAE: nan
+Checkpoint saved at: ./checkpoints/MLPCNN-focal/step_0050/ckpt
+Step 075: Loss = 0.0287 | Accuracy = 0.9694
+2025-04-25 01:01:08.057898: W tensorflow/core/framework/local_rendezvous.cc:404] Local rendezvous is aborting with status: OUT_OF_RANGE: End of sequence
+[Eval] AUC-PR: 0.0039, FNR: 1.0000, IoU: 0.0000, FireFront MAE: nan
+Checkpoint saved at: ./checkpoints/MLPCNN-focal/step_0075/ckpt
+Step 100: Loss = 0.0535 | Accuracy = 0.9768
+2025-04-25 01:01:32.858350: W tensorflow/core/framework/local_rendezvous.cc:404] Local rendezvous is aborting with status: OUT_OF_RANGE: End of sequence
+[Eval] AUC-PR: 0.0039, FNR: 1.0000, IoU: 0.0000, FireFront MAE: nan
+Checkpoint saved at: ./checkpoints/MLPCNN-focal/step_0100/ckpt
+Step 125: Loss = 0.0949 | Accuracy = 0.9731
+2025-04-25 01:01:57.372753: W tensorflow/core/framework/local_rendezvous.cc:404] Local rendezvous is aborting with status: OUT_OF_RANGE: End of sequence
+[Eval] AUC-PR: 0.0039, FNR: 1.0000, IoU: 0.0000, FireFront MAE: nan
+Checkpoint saved at: ./checkpoints/MLPCNN-focal/step_0125/ckpt
+Step 150: Loss = 0.0762 | Accuracy = 0.9726
+2025-04-25 01:02:22.116435: W tensorflow/core/framework/local_rendezvous.cc:404] Local rendezvous is aborting with status: OUT_OF_RANGE: End of sequence
+[Eval] AUC-PR: 0.0039, FNR: 1.0000, IoU: 0.0000, FireFront MAE: nan
+Checkpoint saved at: ./checkpoints/MLPCNN-focal/step_0150/ckpt
+Step 175: Loss = 0.0368 | Accuracy = 0.9697
+2025-04-25 01:02:47.739250: W tensorflow/core/framework/local_rendezvous.cc:404] Local rendezvous is aborting with status: OUT_OF_RANGE: End of sequence
+[Eval] AUC-PR: 0.0039, FNR: 1.0000, IoU: 0.0000, FireFront MAE: nan
+Checkpoint saved at: ./checkpoints/MLPCNN-focal/step_0175/ckpt
+Step 200: Loss = 0.0855 | Accuracy = 0.9755
+2025-04-25 01:03:12.984767: W tensorflow/core/framework/local_rendezvous.cc:404] Local rendezvous is aborting with status: OUT_OF_RANGE: End of sequence
+[Eval] AUC-PR: 0.0039, FNR: 1.0000, IoU: 0.0000, FireFront MAE: nan
+Checkpoint saved at: ./checkpoints/MLPCNN-focal/step_0200/ckpt
+Step 225: Loss = 0.0617 | Accuracy = 0.9765
+2025-04-25 01:03:38.843045: W tensorflow/core/framework/local_rendezvous.cc:404] Local rendezvous is aborting with status: OUT_OF_RANGE: End of sequence
+[Eval] AUC-PR: 0.0039, FNR: 1.0000, IoU: 0.0000, FireFront MAE: nan
+Checkpoint saved at: ./checkpoints/MLPCNN-focal/step_0225/ckpt
+Step 250: Loss = 0.1236 | Accuracy = 0.9777
+2025-04-25 01:04:04.384523: W tensorflow/core/framework/local_rendezvous.cc:404] Local rendezvous is aborting with status: OUT_OF_RANGE: End of sequence
+[Eval] AUC-PR: 0.0039, FNR: 1.0000, IoU: 0.0000, FireFront MAE: nan
+Checkpoint saved at: ./checkpoints/MLPCNN-focal/step_0250/ckpt
+Step 275: Loss = 0.0768 | Accuracy = 0.9782
+2025-04-25 01:04:30.218177: W tensorflow/core/framework/local_rendezvous.cc:404] Local rendezvous is aborting with status: OUT_OF_RANGE: End of sequence
+[Eval] AUC-PR: 0.0039, FNR: 1.0000, IoU: 0.0000, FireFront MAE: nan
+Checkpoint saved at: ./checkpoints/MLPCNN-focal/step_0275/ckpt
+2025-04-25 01:04:49.355621: W tensorflow/core/framework/local_rendezvous.cc:404]
