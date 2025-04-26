@@ -100,7 +100,7 @@ def save_checkpoint(model, optimizer, checkpoint_dir, step, label=None):
     print(f"Checkpoint saved at: {ckpt_path}")
     return ckpt_path
 
-def train_cnn_mlp(model, train_dataset, eval_dataset, checkpoint_dir, loss_type, label=None, num_steps=100, optimizer=None, eval_interval=25):
+def train(model, train_dataset, eval_dataset, checkpoint_dir, loss_type, label=None, num_steps=100, optimizer=None, eval_interval=25):
     
     if loss_type == Loss.BCE:
         loss_fn = tf.keras.losses.BinaryCrossentropy()
@@ -117,7 +117,10 @@ def train_cnn_mlp(model, train_dataset, eval_dataset, checkpoint_dir, loss_type,
 
     print(f"Running pre-training evaluation...")
     evaluate_model(model, eval_dataset)
+    save_checkpoint(model, optimizer, checkpoint_dir=checkpoint_dir, step=0, label=label)
     
+    train_dataset = train_dataset.repeat()
+    print("ready to start trainig...")
     for step, (x_batch, y_batch) in enumerate(train_dataset.take(num_steps)):
         with tf.GradientTape() as tape:
             preds = model(x_batch, training=True)
@@ -136,6 +139,10 @@ def train_cnn_mlp(model, train_dataset, eval_dataset, checkpoint_dir, loss_type,
             evaluate_model(model, eval_dataset)
             
             save_checkpoint(model, optimizer, checkpoint_dir=checkpoint_dir, step=step, label=label)
+            
+    print(f"Running post-training evaluation...")
+    evaluate_model(model, eval_dataset)
+    save_checkpoint(model, optimizer, checkpoint_dir=checkpoint_dir, step=num_steps, label=label)
 
             
             
