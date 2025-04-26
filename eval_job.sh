@@ -4,10 +4,10 @@
 #conda activate cvse
 
 #parameters
-MODEL="CAE"
+MODEL="NDWS_CAE"
 DATA_DIR="./data"
 BATCH_SIZE=128
-CHECKPOINT_DIR="./checkpoints/CAE-weighted_BCE/step_3000/ckpt"
+CHECKPOINT_DIR="./checkpoints/NDWS_CAE-weighted_BCE/step_0250/ckpt"
 
 python eval.py \
 --model ${MODEL} \

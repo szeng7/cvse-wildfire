@@ -4,9 +4,9 @@
 #conda activate cvse
 
 #parameters
-MODEL="CAE"
+MODEL="NDWS_CAE"
 DATA_DIR="./data"
-STEPS=3000
+STEPS=1500
 LOSS="weighted_BCE"
 BATCH_SIZE=128
 LR=1e-5

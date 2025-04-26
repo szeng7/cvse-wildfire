@@ -2,7 +2,7 @@ import argparse
 import os
 import datetime
 
-from functions import get_dataset, train_cnn_mlp, Loss, evaluate_model
+from functions import get_dataset, Loss, evaluate_model
 from models import MLP_CNN, CAE, NDWS_CAE
 import tensorflow as tf
 
