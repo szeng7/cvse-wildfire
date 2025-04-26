@@ -2,8 +2,8 @@ import argparse
 import os
 import datetime
 
-from functions import get_dataset, train_cnn_mlp, Loss
-from models import CNN_MLP
+from functions import get_dataset, train, Loss
+from models import MLP_CNN, CAE, NDWS_CAE
 
 TRAIN_PATTERN="data_full_train*"
 EVAL_PATTERN="data_full_eval__000*"
@@ -13,7 +13,7 @@ NUM_FEATURES=16
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--model', type=str, default='MLPCNN', choices=['MLPCNN'], help='model/architecture to run training with')
+    parser.add_argument('--model', type=str, default='MLPCNN', choices=['MLPCNN', 'CAE', 'NDWS_CAE'], help='model/architecture to run training with')
     parser.add_argument('--data-dir', type=str, default='./data', help='directory that contains the data')
     parser.add_argument('--num-steps', type=int, default=100, help='number of steps to run for training')
     parser.add_argument('--loss', type=str, default='BCE', choices=['BCE', 'weighted_BCE', 'focal'], help='loss function to use during training')
@@ -55,7 +55,11 @@ def main():
     )
 
     if args.model == "MLPCNN":
-        model = CNN_MLP(input_shape=(None, None, 16))
+        model = MLP_CNN(input_shape=(None, None, 16))
+    elif args.model == "CAE":
+        model = CAE(input_shape=(None, None, 16))
+    elif args.model == "NDWS_CAE":
+        model = NDWS_CAE(input_shape=(None, None, 16))
     else:
         raise ValueError(f"Model provided not supported yet: {args.model}")
     
@@ -68,7 +72,7 @@ def main():
     else:
         raise ValueError(f"Provided loss not supported: {args.loss}")
     
-    train_cnn_mlp(model, train_dataset, eval_dataset, checkpoint_dir=args.checkpoint_dir, loss_type=loss_type, label=f"{args.model}-{args.loss}", num_steps=args.num_steps)
+    train(model, train_dataset, eval_dataset, checkpoint_dir=args.checkpoint_dir, loss_type=loss_type, label=f"{args.model}-{args.loss}", num_steps=args.num_steps)
 
 
 if __name__ == '__main__':

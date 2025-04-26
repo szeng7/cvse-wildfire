@@ -4,10 +4,10 @@
 #conda activate cvse
 
 #parameters
-MODEL="MLPCNN"
+MODEL="NDWS_CAE"
 DATA_DIR="./data"
-STEPS=300
-LOSS="focal"
+STEPS=1500
+LOSS="weighted_BCE"
 BATCH_SIZE=128
 LR=1e-5
 SEED=19
