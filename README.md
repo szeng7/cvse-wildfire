@@ -1,3 +1,18 @@
+### Best Results
+
+| Model | AUC-PR (↑) | FNR (↓) | IoU (↑) | Fire Front MAE (↓) |
+|:---|:---|:---|:---|:---|
+| MLPCNN BCE | 0.0076 | 0.9975 | 0.0018 | 29.62 |
+| MLPCNN Weighted BCE | 0.0078 | 0.9568 | 0.0069 | 22.81 |
+| MLPCNN Focal | 0.0029 | 1.0000 | 0.0000 | NaN |
+| CAE | 0.0096 | 0.9137 | 0.0110 | 33.31 |
+| CAE (more training) | 0.0122 | 0.6415 | 0.0126 | 28.87 |
+| NDWS_CAE (reported) | 0.284 | N/A | N/A | N/A |
+| NDWS_CAE (our implementation) | 0.0097 | 0.9975 | 0.0007 | 49.2 |
+
+Run `./job.sh` to run `train.py` and start a training job (all parameters are inside `job.sh` and all code is within `train.py` and `functions.py`)
+Run `./eval_job.sh` to run `eval.py` and start an eval job (update parameters/pathways inside `eval_job.sh` and all code is within `eval.py` and `functions.py`)
+
 ### Conda env maintenance
 
 To activate the env:
