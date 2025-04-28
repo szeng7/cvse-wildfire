@@ -92,3 +92,64 @@ def NDWS_CAE(input_shape):
 
     model = tf.keras.Model(inputs=inputs, outputs=outputs)
     return model
+
+def UNet(input_shape):
+    inputs = layers.Input(shape=input_shape)
+
+    # Encoder
+    c1 = layers.Conv2D(64, (3, 3), activation='relu', padding='same')(inputs)
+    c1 = layers.Conv2D(64, (3, 3), activation='relu', padding='same')(c1)
+    p1 = layers.MaxPooling2D((2, 2))(c1)
+
+    c2 = layers.Conv2D(128, (3, 3), activation='relu', padding='same')(p1)
+    c2 = layers.Conv2D(128, (3, 3), activation='relu', padding='same')(c2)
+    p2 = layers.MaxPooling2D((2, 2))(c2)
+
+    # Bottleneck
+    b = layers.Conv2D(256, (3, 3), activation='relu', padding='same')(p2)
+    b = layers.Conv2D(256, (3, 3), activation='relu', padding='same')(b)
+
+    # Decoder
+    u2 = layers.UpSampling2D((2, 2))(b)
+    u2 = layers.concatenate([u2, c2])
+    c3 = layers.Conv2D(128, (3, 3), activation='relu', padding='same')(u2)
+    c3 = layers.Conv2D(128, (3, 3), activation='relu', padding='same')(c3)
+
+    u1 = layers.UpSampling2D((2, 2))(c3)
+    u1 = layers.concatenate([u1, c1])
+    c4 = layers.Conv2D(64, (3, 3), activation='relu', padding='same')(u1)
+    c4 = layers.Conv2D(64, (3, 3), activation='relu', padding='same')(c4)
+
+    outputs = layers.Conv2D(1, (1, 1), activation='sigmoid')(c4)
+
+    model = Model(inputs, outputs)
+    return model
+
+def UNet_Light(input_shape):
+    inputs = layers.Input(shape=input_shape)
+
+    # Encoder
+    c1 = layers.Conv2D(16, (3, 3), activation='relu', padding='same')(inputs)
+    p1 = layers.MaxPooling2D((2, 2))(c1)
+
+    c2 = layers.Conv2D(32, (3, 3), activation='relu', padding='same')(p1)
+    p2 = layers.MaxPooling2D((2, 2))(c2)
+
+    # Bottleneck
+    b = layers.Conv2D(64, (3, 3), activation='relu', padding='same')(p2)
+
+    # Decoder
+    u2 = layers.UpSampling2D((2, 2))(b)
+    u2 = layers.concatenate([u2, c2])
+    c3 = layers.Conv2D(32, (3, 3), activation='relu', padding='same')(u2)
+
+    u1 = layers.UpSampling2D((2, 2))(c3)
+    u1 = layers.concatenate([u1, c1])
+    c4 = layers.Conv2D(16, (3, 3), activation='relu', padding='same')(u1)
+
+    outputs = layers.Conv2D(1, (1, 1), activation='sigmoid')(c4)
+
+    model = Model(inputs, outputs)
+    return model
+
+    

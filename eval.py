@@ -41,6 +41,10 @@ def main():
         model = CAE(input_shape=(None, None, 16))
     elif args.model == "NDWS_CAE":
         model = NDWS_CAE(input_shape=(None, None, 16))
+    elif args.model == "UNET":
+        model = UNet(input_shape=(None, None, NUM_FEATURES))
+    elif args.model == "UNET_L":
+        model = UNet_Light(input_shape=(None, None, NUM_FEATURES))
     else:
         raise ValueError(f"Model provided not supported yet: {args.model}")
     
