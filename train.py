@@ -3,7 +3,7 @@ import os
 import datetime
 
 from functions import get_dataset, train, Loss
-from models import MLP_CNN, CAE, NDWS_CAE
+from models import MLP_CNN, CAE, NDWS_CAE, UNet, UNet_Light
 
 TRAIN_PATTERN="data_full_train*"
 EVAL_PATTERN="data_full_eval__000*"
@@ -13,7 +13,7 @@ NUM_FEATURES=16
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--model', type=str, default='MLPCNN', choices=['MLPCNN', 'CAE', 'NDWS_CAE'], help='model/architecture to run training with')
+    parser.add_argument('--model', type=str, default='MLPCNN', choices=['MLPCNN', 'CAE', 'NDWS_CAE','UNET','UNET_L'], help='model/architecture to run training with')
     parser.add_argument('--data-dir', type=str, default='./data', help='directory that contains the data')
     parser.add_argument('--num-steps', type=int, default=100, help='number of steps to run for training')
     parser.add_argument('--loss', type=str, default='BCE', choices=['BCE', 'weighted_BCE', 'focal'], help='loss function to use during training')
@@ -60,6 +60,10 @@ def main():
         model = CAE(input_shape=(None, None, 16))
     elif args.model == "NDWS_CAE":
         model = NDWS_CAE(input_shape=(None, None, 16))
+    elif args.model == "UNET":
+        model = UNet(input_shape=(None, None, 16))
+    elif args.model == "UNET_L":
+        model = UNet_Light(input_shape=(None, None, 16))
     else:
         raise ValueError(f"Model provided not supported yet: {args.model}")
     
