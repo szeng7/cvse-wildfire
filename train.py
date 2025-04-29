@@ -5,9 +5,9 @@ import datetime
 from functions import get_dataset, train, Loss
 from models import MLP_CNN, CAE, NDWS_CAE, UNet, UNet_Light
 
-TRAIN_PATTERN="data_full_train*"
-EVAL_PATTERN="data_full_eval__000*"
-TEST_PATTERN="data_full_test*"
+TRAIN_PATTERN="data_full/train*"
+EVAL_PATTERN="data_full/eval__000*"
+TEST_PATTERN="data_full/test*"
 
 NUM_FEATURES=16
 

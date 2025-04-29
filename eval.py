@@ -6,9 +6,9 @@ from functions import get_dataset, Loss, evaluate_model
 from models import MLP_CNN, CAE, NDWS_CAE, UNet, UNet_Light
 import tensorflow as tf
 
-TRAIN_PATTERN="data_full_train*"
-EVAL_PATTERN="data_full_eval*"
-TEST_PATTERN="data_full_test*"
+TRAIN_PATTERN="data_full/train*"
+EVAL_PATTERN="data_full/eval*"
+TEST_PATTERN="data_full/test*"
 
 NUM_FEATURES=16
 
