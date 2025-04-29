@@ -32,7 +32,7 @@ def main():
         sample_size=32, #random 32x32 crops for training
         batch_size=args.batch_size,
         num_in_channels=NUM_FEATURES,
-        compression_type=None,
+        compression_type="GZIP",
         clip_and_normalize=False,
         clip_and_rescale=False,
         random_crop=True, #randomly cropping subregions helps with reducing overfitting/better generalization
@@ -47,7 +47,7 @@ def main():
         sample_size=64, #use full tile for evaluation now
         batch_size=args.batch_size,
         num_in_channels=NUM_FEATURES,
-        compression_type=None,
+        compression_type="GZIP",
         clip_and_normalize=False,
         clip_and_rescale=False,
         random_crop=False,
