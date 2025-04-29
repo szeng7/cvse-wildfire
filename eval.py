@@ -3,7 +3,7 @@ import os
 import datetime
 
 from functions import get_dataset, Loss, evaluate_model
-from models import MLP_CNN, CAE, NDWS_CAE
+from models import MLP_CNN, CAE, NDWS_CAE, UNet, UNet_Light
 import tensorflow as tf
 
 TRAIN_PATTERN="data_full_train*"
@@ -14,7 +14,7 @@ NUM_FEATURES=16
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--model', type=str, default='MLPCNN', choices=['MLPCNN', 'CAE', 'NDWS_CAE'], help='model/architecture to run training with')
+    parser.add_argument('--model', type=str, default='MLPCNN', choices=['MLPCNN', 'CAE', 'NDWS_CAE','UNET','UNET_L'], help='model/architecture to run training with')
     parser.add_argument('--data-dir', type=str, default='./data', help='directory that contains the data')
     parser.add_argument('--checkpoint-dir', type=str, help='checkpoint containing pretrained model weights')
     parser.add_argument('--batch-size', type=int, default=16, help='batch size for training')
