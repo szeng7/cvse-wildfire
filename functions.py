@@ -11,6 +11,7 @@ import cv2
 from scipy.spatial import cKDTree
 from scipy.spatial.distance import cdist
 from scipy.optimize import linear_sum_assignment
+from scipy.ndimage import distance_transform_edt
 
 from enum import Enum
 import os
@@ -23,6 +24,8 @@ class Loss(Enum):
     BCE="bce"
     WEIGHTED_BCE="weighted_bce"
     FOCAL="focal"
+    DICE="dice"
+    TVERSKY="tversky"
 
 def weighted_bce(y_true, y_pred):
     bce = tf.keras.losses.binary_crossentropy(y_true, y_pred)
@@ -50,6 +53,25 @@ def focal_loss(y_true, y_pred, gamma=2.0, alpha=0.25):
 
     loss = alpha_factor * modulating_factor * bce
     return tf.reduce_mean(loss)
+
+def dice_loss(y_true, y_pred):
+    smooth = 1e-6  # small constant to avoid division by zero
+    y_true_f = tf.reshape(y_true, [-1])
+    y_pred_f = tf.reshape(y_pred, [-1])
+    intersection = tf.reduce_sum(y_true_f * y_pred_f)
+    return 1 - (2. * intersection + smooth) / (tf.reduce_sum(y_true_f) + tf.reduce_sum(y_pred_f) + smooth)
+
+def tversky_loss(y_true, y_pred, alpha=0.3, beta=0.7, smooth=1e-6):
+    y_true_flat = tf.reshape(y_true, [-1])
+    y_pred_flat = tf.reshape(y_pred, [-1])
+
+    true_pos = tf.reduce_sum(y_true_flat * y_pred_flat)
+    false_pos = tf.reduce_sum(y_pred_flat * (1 - y_true_flat))
+    false_neg = tf.reduce_sum((1 - y_pred_flat) * y_true_flat)
+
+    tversky_index = (true_pos + smooth) / (true_pos + alpha * false_pos + beta * false_neg + smooth)
+    return 1.0 - tversky_index
+
 
 def evaluate_model(model, eval_dataset, seed=19):
     y_probs = []
@@ -268,6 +290,49 @@ def calc_mae_fire_front(y_pred, y_true, unmatched_penalty=50):
 
     return np.mean(matched_dists)
 
+def extract_fire_front_morphological(mask, kernel_size=3):
+    """
+    Improved fire front detection using morphological gradient (dilation - erosion).
+    Args:
+        mask: 2D numpy array (binary mask)
+    Returns:
+        Fire front coordinates as a list of (y, x)
+    """
+    mask = mask.numpy().squeeze().astype(np.uint8)
+    mask[mask == -1] = 0
+    kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (kernel_size, kernel_size))
+    dilated = cv2.dilate(mask, kernel, iterations=1)
+    eroded = cv2.erode(mask, kernel, iterations=1)
+    gradient = dilated - eroded
+
+    front_coords = np.column_stack(np.where(gradient > 0))
+    return front_coords
+
+def calc_mae_fire_front_distance_transform(y_pred, y_true, unmatched_penalty=50):
+    """
+    Improved version: uses morphology + distance transform to evaluate fire front alignment.
+    """
+    pred_front = extract_fire_front_morphological(y_pred)
+    true_front = extract_fire_front_morphological(y_true)
+
+    # If no fire front exists in prediction or ground truth
+    if len(pred_front) == 0 or len(true_front) == 0:
+        return np.nan
+
+    mask_shape = y_true.shape[:2]
+    true_mask = np.zeros(mask_shape, dtype=np.uint8)
+    true_mask[tuple(true_front.T)] = 1
+    distance_map = distance_transform_edt(1 - true_mask)
+
+    dists = []
+    for y, x in pred_front:
+        if 0 <= y < mask_shape[0] and 0 <= x < mask_shape[1]:
+            dists.append(distance_map[y, x])
+        else:
+            dists.append(unmatched_penalty)
+
+    return np.mean(dists) if dists else np.nan
+
 # --------------------------
 # Constants
 # --------------------------
@@ -371,6 +436,19 @@ def _clip_and_normalize(inputs: tf.Tensor, key: Text) -> tf.Tensor:
     inputs = inputs - mean
     return tf.math.divide_no_nan(inputs, std)
 
+def augment_image_pair(input_img, output_img):
+    if tf.random.uniform(()) > 0.5:
+        input_img = tf.image.flip_left_right(input_img)
+        output_img = tf.image.flip_left_right(output_img)
+    if tf.random.uniform(()) > 0.5:
+        input_img = tf.image.flip_up_down(input_img)
+        output_img = tf.image.flip_up_down(output_img)
+    k = tf.random.uniform((), minval=0, maxval=4, dtype=tf.int32)
+    input_img = tf.image.rot90(input_img, k)
+    output_img = tf.image.rot90(output_img, k)
+    input_img = tf.image.random_brightness(input_img, max_delta=0.1)
+    input_img = tf.image.random_contrast(input_img, lower=0.9, upper=1.1)
+    return input_img, output_img
 
 def _get_features_dict(sample_size: int, features: List[Text]) -> Dict[Text, tf.io.FixedLenFeature]:
     sample_shape = [sample_size, sample_size]
@@ -431,7 +509,7 @@ def is_valid_sample(x, y):
 def get_dataset(file_pattern: Text, data_size: int, sample_size: int,
                 batch_size: int, num_in_channels: int, compression_type: Text,
                 clip_and_normalize: bool, clip_and_rescale: bool,
-                random_crop: bool, center_crop: bool) -> tf.data.Dataset:
+                random_crop: bool, center_crop: bool, augment: bool) -> tf.data.Dataset:
     if clip_and_normalize and clip_and_rescale:
         raise ValueError('Cannot have both normalize and rescale.')
 
@@ -449,6 +527,11 @@ def get_dataset(file_pattern: Text, data_size: int, sample_size: int,
     #filter out invalid examples
     dataset = dataset.filter(is_valid_sample)
     dataset = dataset.batch(batch_size)
+    if augment:
+        dataset = dataset.map(
+            lambda x, y: augment_image_pair(x, y),
+            num_parallel_calls=tf.data.AUTOTUNE
+        )
     dataset = dataset.prefetch(buffer_size=tf.data.experimental.AUTOTUNE)
 
     return dataset
