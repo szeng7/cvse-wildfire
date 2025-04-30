@@ -130,6 +130,10 @@ def train(model, train_dataset, eval_dataset, checkpoint_dir, loss_type, label=N
         loss_fn = weighted_bce
     elif loss_type == Loss.FOCAL:
         loss_fn = focal_loss
+    elif loss_type == Loss.DICE:
+        loss_fn = dice_loss
+    elif loss_type == Loss.TVERSKY:
+        loss_fn = tversky_loss
     else:
         raise ValueError(f"Unsupported loss: {loss_type}")
     acc_metric = tf.keras.metrics.BinaryAccuracy()

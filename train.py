@@ -3,20 +3,20 @@ import os
 import datetime
 
 from functions import get_dataset, train, Loss
-from models import MLP_CNN, CAE, NDWS_CAE
+from models import MLP_CNN, CAE, NDWS_CAE, UNET
 
 TRAIN_PATTERN="data_full_train*"
-EVAL_PATTERN="data_full_eval__000*"
+EVAL_PATTERN="data_full_eval*"
 TEST_PATTERN="data_full_test*"
 
 NUM_FEATURES=16
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--model', type=str, default='MLPCNN', choices=['MLPCNN', 'CAE', 'NDWS_CAE'], help='model/architecture to run training with')
+    parser.add_argument('--model', type=str, default='MLPCNN', choices=['MLPCNN', 'CAE', 'NDWS_CAE', 'UNET'], help='model/architecture to run training with')
     parser.add_argument('--data-dir', type=str, default='./data', help='directory that contains the data')
     parser.add_argument('--num-steps', type=int, default=100, help='number of steps to run for training')
-    parser.add_argument('--loss', type=str, default='BCE', choices=['BCE', 'weighted_BCE', 'focal'], help='loss function to use during training')
+    parser.add_argument('--loss', type=str, default='BCE', choices=['BCE', 'weighted_BCE', 'focal', 'dice'], help='loss function to use during training')
     parser.add_argument('--batch-size', type=int, default=16, help='batch size for training')
     parser.add_argument('--lr', type=float, default=1e-5, help='learning rate')
     parser.add_argument('--shuffle', action='store_true', help='shuffle data batches, use --shuffle to enable shuffling, omit to disable')
@@ -36,7 +36,8 @@ def main():
         clip_and_normalize=False,
         clip_and_rescale=False,
         random_crop=True, #randomly cropping subregions helps with reducing overfitting/better generalization
-        center_crop=False
+        center_crop=False, 
+        augment=True #generalize to new fire shapes and conditions
         )
 
     eval_file_pattern = os.path.join(args.data_dir, EVAL_PATTERN)
@@ -51,7 +52,8 @@ def main():
         clip_and_normalize=False,
         clip_and_rescale=False,
         random_crop=False,
-        center_crop=True #don't think this matters since no cropping (sample size 64) but in case it does, for consistency
+        center_crop=True, #don't think this matters since no cropping (sample size 64) but in case it does, for consistency
+        augment=True #generalize to new fire shapes and conditions
     )
 
     if args.model == "MLPCNN":
@@ -60,6 +62,8 @@ def main():
         model = CAE(input_shape=(None, None, 16))
     elif args.model == "NDWS_CAE":
         model = NDWS_CAE(input_shape=(None, None, 16))
+    elif args.model == "UNET":
+        model = UNET(input_shape=(None, None, 16))
     else:
         raise ValueError(f"Model provided not supported yet: {args.model}")
     
@@ -69,6 +73,10 @@ def main():
         loss_type=Loss.WEIGHTED_BCE
     elif args.loss == "focal":
         loss_type=Loss.FOCAL
+    elif args.loss == "dice":
+        loss_type=Loss.DICE
+    elif args.loss == "tversky":
+        loss_type=Loss.TVERSKY
     else:
         raise ValueError(f"Provided loss not supported: {args.loss}")
     

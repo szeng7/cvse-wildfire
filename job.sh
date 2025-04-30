@@ -6,8 +6,8 @@
 #parameters
 MODEL="NDWS_CAE"
 DATA_DIR="./data"
-STEPS=1500
-LOSS="weighted_BCE"
+STEPS=500
+LOSS="dice"
 BATCH_SIZE=128
 LR=1e-5
 SEED=19

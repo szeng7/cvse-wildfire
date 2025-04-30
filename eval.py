@@ -3,7 +3,7 @@ import os
 import datetime
 
 from functions import get_dataset, Loss, evaluate_model
-from models import MLP_CNN, CAE, NDWS_CAE
+from models import MLP_CNN, CAE, NDWS_CAE, UNET
 import tensorflow as tf
 
 TRAIN_PATTERN="data_full_train*"
@@ -14,7 +14,7 @@ NUM_FEATURES=16
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--model', type=str, default='MLPCNN', choices=['MLPCNN', 'CAE', 'NDWS_CAE'], help='model/architecture to run training with')
+    parser.add_argument('--model', type=str, default='MLPCNN', choices=['MLPCNN', 'CAE', 'NDWS_CAE', 'UNET'], help='model/architecture to run training with')
     parser.add_argument('--data-dir', type=str, default='./data', help='directory that contains the data')
     parser.add_argument('--checkpoint-dir', type=str, help='checkpoint containing pretrained model weights')
     parser.add_argument('--batch-size', type=int, default=16, help='batch size for training')
@@ -32,7 +32,8 @@ def main():
         clip_and_normalize=False,
         clip_and_rescale=False,
         random_crop=False,
-        center_crop=True #don't think this matters since no cropping (sample size 64) but in case it does, for consistency
+        center_crop=True, #don't think this matters since no cropping (sample size 64) but in case it does, for consistency
+        augment=True #generalize to new fire shapes and conditions
     )
 
     if args.model == "MLPCNN":
@@ -41,6 +42,8 @@ def main():
         model = CAE(input_shape=(None, None, 16))
     elif args.model == "NDWS_CAE":
         model = NDWS_CAE(input_shape=(None, None, 16))
+    elif args.model == "UNET":
+        model = UNET(input_shape=(None, None, 16))
     else:
         raise ValueError(f"Model provided not supported yet: {args.model}")
     
