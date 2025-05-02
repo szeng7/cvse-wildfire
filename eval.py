@@ -48,7 +48,7 @@ def main():
     else:
         raise ValueError(f"Model provided not supported yet: {args.model}")
     
-    optimizer = tf.keras.optimizers.Adam(learning_rate=1e-4)
+    optimizer = tf.keras.optimizers.Adam(learning_rate=1e-4,clipnorm=1.0)
     
     checkpoint = tf.train.Checkpoint(model=model, optimizer=optimizer)
     checkpoint.restore(args.checkpoint_dir).expect_partial()

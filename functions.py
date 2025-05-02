@@ -113,7 +113,7 @@ def train(model, train_dataset, eval_dataset, checkpoint_dir, loss_type, label=N
     acc_metric = tf.keras.metrics.BinaryAccuracy()
 
     if optimizer is None:
-        optimizer = tf.keras.optimizers.Adam(learning_rate=1e-4)
+        optimizer = tf.keras.optimizers.Adam(learning_rate=1e-4,clipnorm=1.0)
 
     print(f"Running pre-training evaluation...")
     evaluate_model(model, eval_dataset)
