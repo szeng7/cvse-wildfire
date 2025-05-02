@@ -16,7 +16,7 @@ def main():
     parser.add_argument('--model', type=str, default='MLPCNN', choices=['MLPCNN', 'CAE', 'NDWS_CAE','UNET','UNET_L'], help='model/architecture to run training with')
     parser.add_argument('--data-dir', type=str, default='./data', help='directory that contains the data')
     parser.add_argument('--num-steps', type=int, default=100, help='number of steps to run for training')
-    parser.add_argument('--loss', type=str, default='BCE', choices=['BCE', 'weighted_BCE', 'focal'], help='loss function to use during training')
+    parser.add_argument('--loss', type=str, default='BCE', choices=['BCE', 'weighted_BCE', 'focal', 'dice', 'tversky'], help='loss function to use during training')
     parser.add_argument('--batch-size', type=int, default=16, help='batch size for training')
     parser.add_argument('--lr', type=float, default=1e-5, help='learning rate')
     parser.add_argument('--shuffle', action='store_true', help='shuffle data batches, use --shuffle to enable shuffling, omit to disable')
@@ -68,13 +68,18 @@ def main():
         raise ValueError(f"Model provided not supported yet: {args.model}")
     
     if args.loss == "BCE":
-        loss_type=Loss.BCE
+        loss_type = Loss.BCE
     elif args.loss == "weighted_BCE":
-        loss_type=Loss.WEIGHTED_BCE
+        loss_type = Loss.WEIGHTED_BCE
     elif args.loss == "focal":
-        loss_type=Loss.FOCAL
+        loss_type = Loss.FOCAL
+    elif args.loss == "dice":
+        loss_type = Loss.DICE
+    elif args.loss == "tversky":
+        loss_type = Loss.TVERSKY
     else:
-        raise ValueError(f"Provided loss not supported: {args.loss}")
+        raise ValueError(f"Provided loss not supported: {args.loss} (choose from BCE, weighted_BCE, focal, dice, tversky)")
+
     
     train(model, train_dataset, eval_dataset, checkpoint_dir=args.checkpoint_dir, loss_type=loss_type, label=f"{args.model}-{args.loss}", num_steps=args.num_steps)
 

@@ -19,10 +19,46 @@ import os
 # Training
 # --------------------------
 
+
+
 class Loss(Enum):
-    BCE="bce"
-    WEIGHTED_BCE="weighted_bce"
-    FOCAL="focal"
+    BCE = "bce"
+    WEIGHTED_BCE = "weighted_bce"
+    FOCAL = "focal"
+    DICE = "dice"
+    TVERSKY = "tversky"
+
+def dice_loss(y_true, y_pred, epsilon=1e-6):
+    """
+    Dice Loss = 1 − (2 * intersection + ε) / (sum(y_true) + sum(y_pred) + ε)
+    Good for highly imbalanced foreground (fire) vs background.
+    """
+    # flatten
+    y_true_f = tf.reshape(y_true, [-1])
+    y_pred_f = tf.reshape(y_pred, [-1])
+    intersection = tf.reduce_sum(y_true_f * y_pred_f)
+    denom = tf.reduce_sum(y_true_f) + tf.reduce_sum(y_pred_f)
+    dice_coeff = (2.0 * intersection + epsilon) / (denom + epsilon)
+    return 1.0 - dice_coeff
+
+def tversky_loss(y_true, y_pred, alpha=0.3, beta=0.7, epsilon=1e-6):
+    """
+    Tversky Loss = 1 − TI, where
+      TI = intersection / (intersection + α * FP + β * FN)
+    α<β emphasizes penalizing false negatives harder.
+    """
+    # flatten
+    y_true_f = tf.reshape(y_true, [-1])
+    y_pred_f = tf.reshape(y_pred, [-1])
+
+    # true positives, false negatives, false positives
+    tp = tf.reduce_sum(y_true_f * y_pred_f)
+    fn = tf.reduce_sum(y_true_f * (1.0 - y_pred_f))
+    fp = tf.reduce_sum((1.0 - y_true_f) * y_pred_f)
+
+    tversky_index = (tp + epsilon) / (tp + alpha * fp + beta * fn + epsilon)
+    return 1.0 - tversky_index
+
 
 def weighted_bce(y_true, y_pred):
     bce = tf.keras.losses.binary_crossentropy(y_true, y_pred)
@@ -108,8 +144,13 @@ def train(model, train_dataset, eval_dataset, checkpoint_dir, loss_type, label=N
         loss_fn = weighted_bce
     elif loss_type == Loss.FOCAL:
         loss_fn = focal_loss
+    elif loss_type == Loss.DICE:
+        loss_fn = dice_loss
+    elif loss_type == Loss.TVERSKY:
+        loss_fn = tversky_loss
     else:
         raise ValueError(f"Unsupported loss: {loss_type}")
+
     acc_metric = tf.keras.metrics.BinaryAccuracy()
 
     if optimizer is None:
