@@ -88,39 +88,40 @@ def focal_loss(y_true, y_pred, gamma=2.0, alpha=0.25):
     return tf.reduce_mean(loss)
 
 def evaluate_model(model, eval_dataset, seed=19):
-    y_probs = []
-    y_preds = []
-    y_trues = []
-
-    for x_batch_val, y_batch_val in eval_dataset:
-        probs = model(x_batch_val, training=False)
+    y_probs, y_preds, y_trues = [], [], []
+    for x_batch, y_batch in eval_dataset:
+        probs = model(x_batch, training=False)
         preds = tf.cast(probs > 0.5, tf.float32)
-
         y_probs.append(probs)
         y_preds.append(preds)
-        y_trues.append(y_batch_val)
+        y_trues.append(y_batch)
 
-    #concat all batches
     y_probs = tf.concat(y_probs, axis=0)
     y_preds = tf.concat(y_preds, axis=0)
     y_trues = tf.concat(y_trues, axis=0)
 
-    #eval fast metrics on entire eval set
-    auc_pr = calc_auc_pr(y_probs, y_trues)
-    fnr = calc_false_negative_rate(y_preds, y_trues)
-    jaccard = calc_jaccard(y_preds, y_trues)
-    
-    #mae takes a while, calculate it on just 5 samples
-    np.random.seed(seed)
-    sampled_idx = np.random.choice(len(y_preds), size=min(5, len(y_preds)), replace=False)
-    fire_mae_vals = []
-    for idx in sampled_idx:
-        mae = calc_mae_fire_front(y_preds[idx], y_trues[idx])
-        if not np.isnan(mae):
-            fire_mae_vals.append(mae)
-    fire_mae = np.mean(fire_mae_vals) if fire_mae_vals else float("nan")
+    # classic metrics
+    auc_pr     = calc_auc_pr(y_probs, y_trues)
+    fnr        = calc_false_negative_rate(y_preds, y_trues)
+    jaccard    = calc_jaccard(y_preds, y_trues)
 
-    print(f"[Eval] AUC-PR: {auc_pr:.4f}, FNR: {fnr:.4f}, IoU: {jaccard:.4f}, FireFront MAE: {fire_mae:.2f}")
+    # sample a few tiles for shape errors
+    np.random.seed(seed)
+    idxs = np.random.choice(len(y_preds), size=min(5, len(y_preds)), replace=False)
+
+    mae_vals     = []
+    chamfer_vals = []
+    for i in idxs:
+        mae = calc_mae_fire_front(y_preds[i], y_trues[i])
+        cd  = calc_chamfer_distance(y_preds[i], y_trues[i])
+        if not np.isnan(mae):     mae_vals.append(mae)
+        if not np.isnan(cd):      chamfer_vals.append(cd)
+
+    fire_mae     = np.mean(mae_vals) if mae_vals else float("nan")
+    chamfer_dist = np.mean(chamfer_vals) if chamfer_vals else float("nan")
+
+    print(f"[Eval] AUC-PR: {auc_pr:.4f}, FNR: {fnr:.4f}, IoU: {jaccard:.4f}, "
+          f"FireFront MAE: {fire_mae:.2f}, Chamfer: {chamfer_dist:.2f}")
 
 def save_checkpoint(model, optimizer, checkpoint_dir, step, label=None):
 
@@ -308,6 +309,29 @@ def calc_mae_fire_front(y_pred, y_true, unmatched_penalty=50):
     matched_dists = cost_matrix[row_ind, col_ind]
 
     return np.mean(matched_dists)
+
+def calc_chamfer_distance(y_pred, y_true):
+    """
+    Chamfer distance between predicted and true fire front sets.
+    Computes the average nearest-neighbor distance both ways.
+    """
+    # extract binary masks
+    mask_pred = y_pred.numpy().squeeze().astype(bool)
+    mask_true = y_true.numpy().squeeze().astype(bool)
+    # get coordinates of foreground pixels
+    coords_pred = np.column_stack(np.where(mask_pred))
+    coords_true = np.column_stack(np.where(mask_true))
+    # if either is empty, distance undefined
+    if coords_pred.size == 0 or coords_true.size == 0:
+        return np.nan
+    # build KD-trees
+    tree_true = cKDTree(coords_true)
+    tree_pred = cKDTree(coords_pred)
+    # query nearest distances
+    d_pred_to_true, _ = tree_true.query(coords_pred)
+    d_true_to_pred, _ = tree_pred.query(coords_true)
+    # average both directions
+    return float((d_pred_to_true.mean() + d_true_to_pred.mean()) / 2.0)
 
 # --------------------------
 # Constants
