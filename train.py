@@ -2,7 +2,7 @@ import argparse
 import os
 import datetime
 
-from functions import get_dataset, train, Loss
+from functions import get_dataset, train, Loss, evaluate_model
 from models import MLP_CNN, CAE, NDWS_CAE, UNet, UNet_Light
 
 TRAIN_PATTERN="data_full/train*"
@@ -82,6 +82,22 @@ def main():
 
     
     train(model, train_dataset, eval_dataset, checkpoint_dir=args.checkpoint_dir, loss_type=loss_type, label=f"{args.model}-{args.loss}", num_steps=args.num_steps)
+
+    test_file_pattern = os.path.join(args.data_dir, TEST_PATTERN)
+    test_dataset = get_dataset(
+        file_pattern=test_file_pattern,
+        data_size=64,
+        sample_size=64,
+        batch_size=args.batch_size,
+        num_in_channels=NUM_FEATURES,
+        compression_type="GZIP",
+        clip_and_normalize=False,
+        clip_and_rescale=False,
+        random_crop=False,
+        center_crop=True
+    )
+
+    evaluate_model(model, test_dataset)
 
 
 if __name__ == '__main__':
