@@ -137,7 +137,7 @@ def save_checkpoint(model, optimizer, checkpoint_dir, step, label=None):
     print(f"Checkpoint saved at: {ckpt_path}")
     return ckpt_path
 
-def train(model, train_dataset, eval_dataset, checkpoint_dir, loss_type, label=None, num_steps=100, optimizer=None, eval_interval=100):
+def train(model, train_dataset, eval_dataset, checkpoint_dir, loss_type, label=None, num_steps=100, optimizer=None, eval_interval=50):
     
     if loss_type == Loss.BCE:
         loss_fn = tf.keras.losses.BinaryCrossentropy()
