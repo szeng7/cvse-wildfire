@@ -310,28 +310,43 @@ def calc_mae_fire_front(y_pred, y_true, unmatched_penalty=50):
 
     return np.mean(matched_dists)
 
-def calc_chamfer_distance(y_pred, y_true):
+def calc_chamfer_front(y_pred, y_true, unmatched_penalty=50):
     """
-    Chamfer distance between predicted and true fire front sets.
-    Computes the average nearest-neighbor distance both ways.
+    Chamfer distance calculated *only* on the fire front (edges) of the binary masks.
+    Uses Canny edge detection to extract front pixels, then averages NN distances both ways.
     """
-    # extract binary masks
-    mask_pred = y_pred.numpy().squeeze().astype(bool)
-    mask_true = y_true.numpy().squeeze().astype(bool)
-    # get coordinates of foreground pixels
-    coords_pred = np.column_stack(np.where(mask_pred))
-    coords_true = np.column_stack(np.where(mask_true))
-    # if either is empty, distance undefined
-    if coords_pred.size == 0 or coords_true.size == 0:
+    def extract_front_coords(mask):
+        # Turn to 2D uint8, zero out uncertain labels, run Canny to find edges
+        arr = mask.numpy().squeeze().astype(np.uint8)
+        arr[arr == -1] = 0
+        edges = cv2.Canny(arr * 255, 100, 200)
+        return np.column_stack(np.where(edges > 0))
+
+    # Get front pixel coords for both prediction and truth
+    pred_front = extract_front_coords(y_pred)
+    true_front = extract_front_coords(y_true)
+
+    if len(pred_front) == 0 or len(true_front) == 0:
         return np.nan
-    # build KD-trees
-    tree_true = cKDTree(coords_true)
-    tree_pred = cKDTree(coords_pred)
-    # query nearest distances
-    d_pred_to_true, _ = tree_true.query(coords_pred)
-    d_true_to_pred, _ = tree_pred.query(coords_true)
-    # average both directions
-    return float((d_pred_to_true.mean() + d_true_to_pred.mean()) / 2.0)
+
+    # Pad the smaller set so we enforce 1:1 matching
+    max_len = max(len(pred_front), len(true_front))
+    dummy = np.array([[unmatched_penalty, unmatched_penalty]])
+    if len(pred_front) < max_len:
+        pred_front = np.vstack([pred_front,
+                                np.tile(dummy, (max_len - len(pred_front), 1))])
+    if len(true_front) < max_len:
+        true_front = np.vstack([true_front,
+                                np.tile(dummy, (max_len - len(true_front), 1))])
+
+    # Build KD-trees and compute bidirectional nearest‐neighbor distances
+    tree_true = cKDTree(true_front)
+    tree_pred = cKDTree(pred_front)
+    d_pt, _ = tree_true.query(pred_front)
+    d_tp, _ = tree_pred.query(true_front)
+
+    # Return the mean of both directions
+    return float((d_pt.mean() + d_tp.mean()) / 2.0)
 
 # --------------------------
 # Constants
