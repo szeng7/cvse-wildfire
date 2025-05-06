@@ -16,7 +16,7 @@ def main():
     parser.add_argument('--model', type=str, default='MLPCNN', choices=['MLPCNN', 'CAE', 'NDWS_CAE', 'UNET', 'UNET_L'], help='model/architecture to run training with')
     parser.add_argument('--data-dir', type=str, default='./data', help='directory that contains the data')
     parser.add_argument('--num-steps', type=int, default=100, help='number of steps to run for training')
-    parser.add_argument('--loss', type=str, default='BCE', choices=['BCE', 'weighted_BCE', 'focal', 'dice'], help='loss function to use during training')
+    parser.add_argument('--loss', type=str, default='BCE', choices=['BCE', 'weighted_BCE', 'focal', 'dice', 'tversky'], help='loss function to use during training')
     parser.add_argument('--batch-size', type=int, default=16, help='batch size for training')
     parser.add_argument('--lr', type=float, default=1e-5, help='learning rate')
     parser.add_argument('--shuffle', action='store_true', help='shuffle data batches, use --shuffle to enable shuffling, omit to disable')

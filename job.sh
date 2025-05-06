@@ -6,12 +6,12 @@
 #parameters
 MODEL="NDWS_CAE"
 DATA_DIR="./data"
-STEPS=500
+STEPS=400
 LOSS="dice"
 BATCH_SIZE=128
 LR=1e-5
 SEED=19
-AUGMENT=False
+AUGMENT=0
 CHECKPOINT_DIR="./checkpoints"
 
 python train.py \
