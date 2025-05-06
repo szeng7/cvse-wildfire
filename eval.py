@@ -3,7 +3,7 @@ import os
 import datetime
 
 from functions import get_dataset, Loss, evaluate_model
-from models import MLP_CNN, CAE, NDWS_CAE, UNET
+from models import MLP_CNN, CAE, NDWS_CAE, UNET, UNet_Light
 import tensorflow as tf
 
 TRAIN_PATTERN="data_full_train*"
@@ -14,10 +14,11 @@ NUM_FEATURES=16
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--model', type=str, default='MLPCNN', choices=['MLPCNN', 'CAE', 'NDWS_CAE', 'UNET'], help='model/architecture to run training with')
+    parser.add_argument('--model', type=str, default='MLPCNN', choices=['MLPCNN', 'CAE', 'NDWS_CAE', 'UNET', 'UNET_L'], help='model/architecture to run training with')
     parser.add_argument('--data-dir', type=str, default='./data', help='directory that contains the data')
     parser.add_argument('--checkpoint-dir', type=str, help='checkpoint containing pretrained model weights')
     parser.add_argument('--batch-size', type=int, default=16, help='batch size for training')
+    parser.add_argument('--augment', type=int, choices=[0, 1], default=0, help='Enable data augmentation (1) or disable (0).')
     args = parser.parse_args()
 
     test_file_pattern = os.path.join(args.data_dir, TEST_PATTERN)
@@ -33,7 +34,7 @@ def main():
         clip_and_rescale=False,
         random_crop=False,
         center_crop=True, #don't think this matters since no cropping (sample size 64) but in case it does, for consistency
-        augment=True #generalize to new fire shapes and conditions
+        augment=bool(args.augment) #generalize to new fire shapes and conditions
     )
 
     if args.model == "MLPCNN":
@@ -44,12 +45,14 @@ def main():
         model = NDWS_CAE(input_shape=(None, None, 16))
     elif args.model == "UNET":
         model = UNET(input_shape=(None, None, 16))
+    elif args.model == "UNET_L":
+        model = UNet_Light(input_shape=(None, None, 16))
     else:
         raise ValueError(f"Model provided not supported yet: {args.model}")
     
     optimizer = tf.keras.optimizers.Adam(learning_rate=1e-4)
     
-    checkpoint = tf.train.Checkpoint(model=model, optimizer=optimizer)
+    checkpoint = tf.train.Checkpoint(model=model, optimizer=optimizer, clipnorm=1.0)
     checkpoint.restore(args.checkpoint_dir).expect_partial()
     
     evaluate_model(model, test_dataset)

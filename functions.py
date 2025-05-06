@@ -1,12 +1,9 @@
 import re
-from typing import Dict, List, Optional, Text, Tuple
-import matplotlib.pyplot as plt
-from matplotlib import colors
+from typing import Dict, List, Text, Tuple
 import tensorflow as tf
-from tensorflow.keras import layers, Model
 
 import numpy as np
-from sklearn.metrics import precision_recall_curve, auc, confusion_matrix, jaccard_score, mean_absolute_error
+from sklearn.metrics import precision_recall_curve, auc, confusion_matrix, jaccard_score, average_precision_score
 import cv2
 from scipy.spatial import cKDTree
 from scipy.spatial.distance import cdist
@@ -72,41 +69,49 @@ def tversky_loss(y_true, y_pred, alpha=0.3, beta=0.7, smooth=1e-6):
     tversky_index = (true_pos + smooth) / (true_pos + alpha * false_pos + beta * false_neg + smooth)
     return 1.0 - tversky_index
 
-
 def evaluate_model(model, eval_dataset, seed=19):
-    y_probs = []
-    y_preds = []
-    y_trues = []
-
-    for x_batch_val, y_batch_val in eval_dataset:
-        probs = model(x_batch_val, training=False)
+    y_probs, y_preds, y_trues = [], [], []
+    for x_batch, y_batch in eval_dataset:
+        probs = model(x_batch, training=False)
         preds = tf.cast(probs > 0.5, tf.float32)
 
         y_probs.append(probs)
         y_preds.append(preds)
-        y_trues.append(y_batch_val)
+        y_trues.append(y_batch)
 
     #concat all batches
     y_probs = tf.concat(y_probs, axis=0)
     y_preds = tf.concat(y_preds, axis=0)
     y_trues = tf.concat(y_trues, axis=0)
 
-    #eval fast metrics on entire eval set
+    #classic metrics
     auc_pr = calc_auc_pr(y_probs, y_trues)
+    mea_pr = calc_mea_precision(y_probs, y_trues)
     fnr = calc_false_negative_rate(y_preds, y_trues)
     jaccard = calc_jaccard(y_preds, y_trues)
     
     #mae takes a while, calculate it on just 5 samples
     np.random.seed(seed)
-    sampled_idx = np.random.choice(len(y_preds), size=min(5, len(y_preds)), replace=False)
-    fire_mae_vals = []
-    for idx in sampled_idx:
+    idxs = np.random.choice(len(y_preds), size=min(5, len(y_preds)), replace=False)
+    mae_vals = []
+    mae2_vals = []
+    chamfer_vals = []
+    for idx in idxs:
         mae = calc_mae_fire_front(y_preds[idx], y_trues[idx])
+        mae2 = calc_mae_fire_front_distance_transform(y_preds[idx], y_trues[idx])
+        cd  = calc_chamfer_front(y_preds[idx], y_trues[idx])
         if not np.isnan(mae):
-            fire_mae_vals.append(mae)
-    fire_mae = np.mean(fire_mae_vals) if fire_mae_vals else float("nan")
+            mae_vals.append(mae)
+        if not np.isnan(mae2):
+            mae2_vals.append(mae2)
+        if not np.isnan(cd):      
+            chamfer_vals.append(cd)
+    fire_mae = np.mean(mae_vals) if mae_vals else float("nan")
+    fire_mae2 = np.mean(mae2_vals) if mae2_vals else float("nan")
+    chamfer_dist = np.mean(chamfer_vals) if chamfer_vals else float("nan")
 
-    print(f"[Eval] AUC-PR: {auc_pr:.4f}, FNR: {fnr:.4f}, IoU: {jaccard:.4f}, FireFront MAE: {fire_mae:.2f}")
+    results_str = f"[Eval] AUC-PR: {auc_pr:.4f}, MEA-PR: {mea_pr:.4f}, FNR: {fnr:.4f}, IoU: {jaccard:.4f}, FireFront MAE: {fire_mae:.2f}, FireFront MAE2: {fire_mae2:.2f}, Chamfer: {chamfer_dist:.2f}"
+    print(results_str)
 
 def save_checkpoint(model, optimizer, checkpoint_dir, step, label=None):
 
@@ -122,8 +127,7 @@ def save_checkpoint(model, optimizer, checkpoint_dir, step, label=None):
     print(f"Checkpoint saved at: {ckpt_path}")
     return ckpt_path
 
-def train(model, train_dataset, eval_dataset, checkpoint_dir, loss_type, label=None, num_steps=100, optimizer=None, eval_interval=25):
-    
+def train(model, train_dataset, eval_dataset, checkpoint_dir, loss_type, label=None, num_steps=100, optimizer=None, eval_interval=50):
     if loss_type == Loss.BCE:
         loss_fn = tf.keras.losses.BinaryCrossentropy()
     elif loss_type == Loss.WEIGHTED_BCE:
@@ -139,14 +143,14 @@ def train(model, train_dataset, eval_dataset, checkpoint_dir, loss_type, label=N
     acc_metric = tf.keras.metrics.BinaryAccuracy()
 
     if optimizer is None:
-        optimizer = tf.keras.optimizers.Adam(learning_rate=1e-4)
+        optimizer = tf.keras.optimizers.Adam(learning_rate=1e-4, clipnorm=1.0)
 
-    print(f"Running pre-training evaluation...")
+    print(f"Running pre-training evaluation for ------ {label} ------")
     evaluate_model(model, eval_dataset)
     save_checkpoint(model, optimizer, checkpoint_dir=checkpoint_dir, step=0, label=label)
     
     train_dataset = train_dataset.repeat()
-    print("ready to start trainig...")
+    print(f"ready to start trainig------ {label} ------")
     for step, (x_batch, y_batch) in enumerate(train_dataset.take(num_steps)):
         with tf.GradientTape() as tape:
             preds = model(x_batch, training=True)
@@ -159,14 +163,12 @@ def train(model, train_dataset, eval_dataset, checkpoint_dir, loss_type, label=N
 
         if step % eval_interval == 0:
             acc = acc_metric.result().numpy()
-            print(f"Step {step:03d}: Loss = {loss:.4f} | Accuracy = {acc:.4f}")
+            print(f"----------Step {step:03d}------------: Loss = {loss:.4f} | Accuracy = {acc:.4f}")
             acc_metric.reset_state()
-            
             evaluate_model(model, eval_dataset)
-            
             save_checkpoint(model, optimizer, checkpoint_dir=checkpoint_dir, step=step, label=label)
             
-    print(f"Running post-training evaluation...")
+    print(f"Running post-training evaluation for ------ {label} ------")
     evaluate_model(model, eval_dataset)
     save_checkpoint(model, optimizer, checkpoint_dir=checkpoint_dir, step=num_steps, label=label)
 
@@ -200,6 +202,15 @@ def calc_auc_pr(y_pred_proba, y_true):
     
     precision, recall, _ = precision_recall_curve(y_true_flat, y_pred_flat) #not using third output of thresholds
     return auc(recall, precision)
+
+def calc_mea_precision(y_pred_proba, y_true):
+    """
+    Equivalent using sklearn's average_precision_score.
+    """
+    y_pred = y_pred_proba.numpy().flatten()
+    y_lbls = y_true.numpy().flatten()
+    mask   = (y_lbls != -1)
+    return average_precision_score(y_lbls[mask], y_pred[mask])
 
 def calc_false_negative_rate(y_pred, y_true):
     """
@@ -336,6 +347,45 @@ def calc_mae_fire_front_distance_transform(y_pred, y_true, unmatched_penalty=50)
             dists.append(unmatched_penalty)
 
     return np.mean(dists) if dists else np.nan
+
+def calc_chamfer_front(y_pred, y_true, unmatched_penalty=50):
+    """
+    Chamfer distance calculated *only* on the fire front (edges) of the binary masks.
+    Uses Canny edge detection to extract front pixels, then averages NN distances both ways.
+    """
+    def extract_front_coords(mask):
+        # Turn to 2D uint8, zero out uncertain labels, run Canny to find edges
+        arr = mask.numpy().squeeze().astype(np.uint8)
+        arr[arr == -1] = 0
+        edges = cv2.Canny(arr * 255, 100, 200)
+        return np.column_stack(np.where(edges > 0))
+
+    # Get front pixel coords for both prediction and truth
+    pred_front = extract_front_coords(y_pred)
+    true_front = extract_front_coords(y_true)
+
+    if len(pred_front) == 0 or len(true_front) == 0:
+        return np.nan
+
+    # Pad the smaller set so we enforce 1:1 matching
+    max_len = max(len(pred_front), len(true_front))
+    dummy = np.array([[unmatched_penalty, unmatched_penalty]])
+    if len(pred_front) < max_len:
+        pred_front = np.vstack([pred_front,
+                                np.tile(dummy, (max_len - len(pred_front), 1))])
+    if len(true_front) < max_len:
+        true_front = np.vstack([true_front,
+                                np.tile(dummy, (max_len - len(true_front), 1))])
+
+    # Build KD-trees and compute bidirectional nearest‐neighbor distances
+    tree_true = cKDTree(true_front)
+    tree_pred = cKDTree(pred_front)
+    d_pt, _ = tree_true.query(pred_front)
+    d_tp, _ = tree_pred.query(true_front)
+
+    # Return the mean of both directions
+    return float((d_pt.mean() + d_tp.mean()) / 2.0)
+
 
 # --------------------------
 # Constants

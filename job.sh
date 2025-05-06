@@ -11,6 +11,7 @@ LOSS="dice"
 BATCH_SIZE=128
 LR=1e-5
 SEED=19
+AUGMENT=False
 CHECKPOINT_DIR="./checkpoints"
 
 python train.py \
@@ -22,4 +23,5 @@ python train.py \
 --lr ${LR} \
 --shuffle \
 --seed ${SEED} \
+--augment ${AUGMENT} \
 --checkpoint-dir ${CHECKPOINT_DIR}
