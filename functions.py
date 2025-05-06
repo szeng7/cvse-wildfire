@@ -113,7 +113,7 @@ def evaluate_model(model, eval_dataset, seed=19):
     chamfer_vals = []
     for i in idxs:
         mae = calc_mae_fire_front(y_preds[i], y_trues[i])
-        cd  = calc_chamfer_distance(y_preds[i], y_trues[i])
+        cd  = calc_chamfer_front(y_preds[i], y_trues[i])
         if not np.isnan(mae):     mae_vals.append(mae)
         if not np.isnan(cd):      chamfer_vals.append(cd)
 
