@@ -9,7 +9,7 @@ TRAIN_PATTERN="data_full/train*"
 EVAL_PATTERN="data_full/eval__000*"
 TEST_PATTERN="data_full/test*"
 
-NUM_FEATURES=16
+NUM_FEATURES=12
 
 def main():
     parser = argparse.ArgumentParser()
@@ -55,15 +55,15 @@ def main():
     )
 
     if args.model == "MLPCNN":
-        model = MLP_CNN(input_shape=(None, None, 16))
+        model = MLP_CNN(input_shape=(None, None, NUM_FEATURES))
     elif args.model == "CAE":
-        model = CAE(input_shape=(None, None, 16))
+        model = CAE(input_shape=(None, None, NUM_FEATURES))
     elif args.model == "NDWS_CAE":
-        model = NDWS_CAE(input_shape=(None, None, 16))
+        model = NDWS_CAE(input_shape=(None, None, NUM_FEATURES))
     elif args.model == "UNET":
-        model = UNet(input_shape=(None, None, 16))
+        model = UNet(input_shape=(None, None, NUM_FEATURES))
     elif args.model == "UNET_L":
-        model = UNet_Light(input_shape=(None, None, 16))
+        model = UNet_Light(input_shape=(None, None, NUM_FEATURES))
     else:
         raise ValueError(f"Model provided not supported yet: {args.model}")
     
