@@ -11,6 +11,7 @@ import cv2
 from scipy.spatial import cKDTree
 from scipy.spatial.distance import cdist
 from scipy.optimize import linear_sum_assignment
+from tqdm import tqdm
 
 from enum import Enum
 import os
@@ -52,39 +53,41 @@ def focal_loss(y_true, y_pred, gamma=2.0, alpha=0.25):
     return tf.reduce_mean(loss)
 
 def evaluate_model(model, eval_dataset, seed=19):
-    y_probs = []
-    y_preds = []
-    y_trues = []
-
-    for x_batch_val, y_batch_val in eval_dataset:
-        probs = model(x_batch_val, training=False)
-        preds = tf.cast(probs > 0.5, tf.float32)
-
+    y_probs, y_trues = [], []
+    for x_batch, y_batch in eval_dataset:
+        probs = model(x_batch, training=False)
         y_probs.append(probs)
-        y_preds.append(preds)
-        y_trues.append(y_batch_val)
+        y_trues.append(y_batch)
 
-    #concat all batches
     y_probs = tf.concat(y_probs, axis=0)
-    y_preds = tf.concat(y_preds, axis=0)
     y_trues = tf.concat(y_trues, axis=0)
 
-    #eval fast metrics on entire eval set
+    # classic metrics
     auc_pr = calc_auc_pr(y_probs, y_trues)
-    fnr = calc_false_negative_rate(y_preds, y_trues)
-    jaccard = calc_jaccard(y_preds, y_trues)
-    
-    #mae takes a while, calculate it on just 5 samples
-    np.random.seed(seed)
-    sampled_idx = np.random.choice(len(y_preds), size=min(5, len(y_preds)), replace=False)
-    fire_mae_vals = []
-    for idx in sampled_idx:
-        mae = calc_mae_fire_front(y_preds[idx], y_trues[idx])
-        if not np.isnan(mae):
-            fire_mae_vals.append(mae)
-    fire_mae = np.mean(fire_mae_vals) if fire_mae_vals else float("nan")
+    fnr_list, thres_list = calc_best_false_negative_rate(y_probs, y_trues)
+    for idx in tqdm(range(len(thres_list))):
+        thres = thres_list[idx]
+        fnr = fnr_list[idx]
+        y_preds = tf.cast(y_probs > thres, tf.float32)
+        jaccard    = calc_jaccard(y_preds, y_trues)
 
-    print(f"[Eval] AUC-PR: {auc_pr:.4f}, FNR: {fnr:.4f}, IoU: {jaccard:.4f}, FireFront MAE: {fire_mae:.2f}")
+        # sample a few tiles for shape errors
+        np.random.seed(seed)
+        idxs = np.random.choice(len(y_preds), size=min(5, len(y_preds)), replace=False)
+
+        mae_vals     = []
+        chamfer_vals = []
+        for i in idxs:
+            mae = calc_mae_fire_front(y_preds[i], y_trues[i])
+            cd  = calc_chamfer_front(y_preds[i], y_trues[i])
+            if not np.isnan(mae):     mae_vals.append(mae)
+            if not np.isnan(cd):      chamfer_vals.append(cd)
+
+        fire_mae     = np.mean(mae_vals) if mae_vals else float("nan")
+        chamfer_dist = np.mean(chamfer_vals) if chamfer_vals else float("nan")
+
+        print(f"[Eval] AUC-PR: {auc_pr:.4f}, FNR: {fnr:.4f} at {thres:.4f}, IoU: {jaccard:.4f}, "
+            f"FireFront MAE: {fire_mae:.2f}, Chamfer: {chamfer_dist:.2f}")
 
 def save_checkpoint(model, optimizer, checkpoint_dir, step, label=None):
 
@@ -100,7 +103,7 @@ def save_checkpoint(model, optimizer, checkpoint_dir, step, label=None):
     print(f"Checkpoint saved at: {ckpt_path}")
     return ckpt_path
 
-def train(model, train_dataset, eval_dataset, checkpoint_dir, loss_type, label=None, num_steps=100, optimizer=None, eval_interval=25):
+def train(model, train_dataset, eval_dataset, checkpoint_dir, loss_type, label=None, num_steps=100, optimizer=None, eval_interval=100):
     
     if loss_type == Loss.BCE:
         loss_fn = tf.keras.losses.BinaryCrossentropy()
@@ -115,12 +118,12 @@ def train(model, train_dataset, eval_dataset, checkpoint_dir, loss_type, label=N
     if optimizer is None:
         optimizer = tf.keras.optimizers.Adam(learning_rate=1e-4)
 
-    print(f"Running pre-training evaluation...")
-    evaluate_model(model, eval_dataset)
-    save_checkpoint(model, optimizer, checkpoint_dir=checkpoint_dir, step=0, label=label)
+    #print(f"Running pre-training evaluation...")
+    #evaluate_model(model, eval_dataset)
+    #save_checkpoint(model, optimizer, checkpoint_dir=checkpoint_dir, step=0, label=label)
     
     train_dataset = train_dataset.repeat()
-    print("ready to start trainig...")
+    print("ready to start training...")
     for step, (x_batch, y_batch) in enumerate(train_dataset.take(num_steps)):
         with tf.GradientTape() as tape:
             preds = model(x_batch, training=True)
@@ -175,25 +178,37 @@ def calc_auc_pr(y_pred_proba, y_true):
     precision, recall, _ = precision_recall_curve(y_true_flat, y_pred_flat) #not using third output of thresholds
     return auc(recall, precision)
 
-def calc_false_negative_rate(y_pred, y_true):
+def calc_best_false_negative_rate(y_probs, y_true):
     """
     Args:
         y_pred: binary predictions, shape (32,32,1)
         y_true: ground truth, shape (32,32,1)
     Returns:
-        Single value from 0 to 1. Lower value (closer to 0) indicates that the model predicts less false negatives. In this context,
+        Tuple of (fnr, best_threshold)
+        FNR: Single value from 0 to 1. Lower value (closer to 0) indicates that the model predicts less false negatives. In this context,
         false negatives (inaccurately predicting no wildfire) is catastrophic and avoiding them should be a priority.
     """
-    y_pred_flat = y_pred.numpy().flatten()
+    y_probs_flat = tf.sigmoid(y_probs).numpy().flatten()
+    print(f"Sigmoid output range: min={y_probs_flat.min():.5f}, max={y_probs_flat.max():.5f}")
     y_true_flat = y_true.numpy().flatten()
     
     #mask out uncertain labels (-1)
     valid_mask = y_true_flat != -1
-    y_pred_flat = y_pred_flat[valid_mask]
+    y_probs_flat = y_probs_flat[valid_mask]
     y_true_flat = y_true_flat[valid_mask]
     
-    _, _, fn, tp = confusion_matrix(y_true_flat, y_pred_flat).ravel() #not using first two outputs of true negative and false positives
-    return fn / (fn + tp + 1e-8) #avoid division by zero
+    #cap the number of thresholds to 10
+    thresholds = np.linspace(y_probs_flat.min(), y_probs_flat.max(), 10)
+
+    preds_matrix = y_probs_flat[None, :] > thresholds[:, None]
+    true_positives = ((preds_matrix == 1) & (y_true_flat == 1)).sum(axis=1)
+    false_negatives = ((preds_matrix == 0) & (y_true_flat == 1)).sum(axis=1)
+
+    fnr = false_negatives / (false_negatives + true_positives + 1e-8)
+
+    print(f"Best Threshold: {fnr.min()}")
+
+    return fnr.tolist(), thresholds.tolist()
 
 def calc_jaccard(y_pred, y_true):
     """
@@ -267,6 +282,44 @@ def calc_mae_fire_front(y_pred, y_true, unmatched_penalty=50):
     matched_dists = cost_matrix[row_ind, col_ind]
 
     return np.mean(matched_dists)
+
+def calc_chamfer_front(y_pred, y_true, unmatched_penalty=50):
+    """
+    Chamfer distance calculated *only* on the fire front (edges) of the binary masks.
+    Uses Canny edge detection to extract front pixels, then averages NN distances both ways.
+    """
+    def extract_front_coords(mask):
+        # Turn to 2D uint8, zero out uncertain labels, run Canny to find edges
+        arr = mask.numpy().squeeze().astype(np.uint8)
+        arr[arr == -1] = 0
+        edges = cv2.Canny(arr * 255, 100, 200)
+        return np.column_stack(np.where(edges > 0))
+
+    # Get front pixel coords for both prediction and truth
+    pred_front = extract_front_coords(y_pred)
+    true_front = extract_front_coords(y_true)
+
+    if len(pred_front) == 0 or len(true_front) == 0:
+        return np.nan
+
+    # Pad the smaller set so we enforce 1:1 matching
+    max_len = max(len(pred_front), len(true_front))
+    dummy = np.array([[unmatched_penalty, unmatched_penalty]])
+    if len(pred_front) < max_len:
+        pred_front = np.vstack([pred_front,
+                                np.tile(dummy, (max_len - len(pred_front), 1))])
+    if len(true_front) < max_len:
+        true_front = np.vstack([true_front,
+                                np.tile(dummy, (max_len - len(true_front), 1))])
+
+    # Build KD-trees and compute bidirectional nearest‐neighbor distances
+    tree_true = cKDTree(true_front)
+    tree_pred = cKDTree(pred_front)
+    d_pt, _ = tree_true.query(pred_front)
+    d_tp, _ = tree_pred.query(true_front)
+
+    # Return the mean of both directions
+    return float((d_pt.mean() + d_tp.mean()) / 2.0)
 
 # --------------------------
 # Constants
