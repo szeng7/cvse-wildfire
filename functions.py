@@ -367,7 +367,7 @@ def calc_chamfer_front(y_pred, y_true, unmatched_penalty=50):
 # --------------------------
 
 INPUT_FEATURES = ['elevation', 'th', 'vs', 'tmmn', 'tmmx', 'sph',
-                  'pr', 'pdsi', 'NDVI', 'population', 'erc', 'PrevFireMask'
+                  'pr', 'pdsi', 'NDVI', 'population', 'erc', 'PrevFireMask',
                   'u_component_of_wind_10m_above_ground',
                   'v_component_of_wind_10m_above_ground',
                   'temperature_2m_above_ground',
