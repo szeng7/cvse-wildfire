@@ -367,11 +367,12 @@ def calc_chamfer_front(y_pred, y_true, unmatched_penalty=50):
 # --------------------------
 
 INPUT_FEATURES = ['elevation', 'th', 'vs', 'tmmn', 'tmmx', 'sph',
-                  'pr', 'pdsi', 'NDVI', 'population', 'erc', 'PrevFireMask',
-                  'u_component_of_wind_10m_above_ground',
-                  'v_component_of_wind_10m_above_ground',
-                  'temperature_2m_above_ground',
-                  'precipitable_water_entire_atmosphere'
+                  'pr', 'pdsi', 'NDVI', 'population', 'erc', 
+                  #'u_component_of_wind_10m_above_ground',
+                  #'v_component_of_wind_10m_above_ground',
+                  #'temperature_2m_above_ground',
+                  #'precipitable_water_entire_atmosphere',
+                  'PrevFireMask'
                   ]
 
 OUTPUT_FEATURES = ['FireMask']
@@ -389,10 +390,10 @@ DATA_STATS = {
     'erc': (0.0, 106.2489, 37.3263, 20.8460),
     'population': (0.0, 2534.0630, 25.5314, 154.7233),
     'PrevFireMask': (-1.0, 1.0, 0.0, 1.0),
-    'u_component_of_wind_10m_above_ground': (-0.1272, 1.4860, 0.6746, 0.3910),
-    'v_component_of_wind_10m_above_ground': (-0.6535, 0.9800, 0.1719, 0.3948),
-    'temperature_2m_above_ground': (15.2312, 18.6066, 16.9189, 0.8326),
-    'precipitable_water_entire_atmosphere': (16.0138, 18.7311, 17.3379, 0.6677),
+    #'u_component_of_wind_10m_above_ground': (-0.1272, 1.4860, 0.6746, 0.3910),
+    #'v_component_of_wind_10m_above_ground': (-0.6535, 0.9800, 0.1719, 0.3948),
+    #'temperature_2m_above_ground': (15.2312, 18.6066, 16.9189, 0.8326),
+    #'precipitable_water_entire_atmosphere': (16.0138, 18.7311, 17.3379, 0.6677),
     'FireMask': (-1.0, 1.0, 0.0, 1.0),
 }
 

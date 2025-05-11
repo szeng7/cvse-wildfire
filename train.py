@@ -9,7 +9,7 @@ TRAIN_PATTERN="data_full/train*"
 EVAL_PATTERN="data_full/eval__000*"
 TEST_PATTERN="data_full/test*"
 
-NUM_FEATURES=16
+NUM_FEATURES=12
 
 def main():
     parser = argparse.ArgumentParser()
